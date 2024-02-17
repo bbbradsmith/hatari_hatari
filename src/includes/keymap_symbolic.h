@@ -311,13 +311,13 @@ static uint8_t Keymap_SymbolicToStScanCode_HU(const SDL_Keysym* pKeySym) { (void
 static uint8_t Keymap_SymbolicToStScanCode_RU(const SDL_Keysym* pKeySym)
 {
 	/* no information available, default to US */
-	return Keymap_SymbolicToScanCode_US(pKeySym);
+	return Keymap_SymbolicToStScanCode_US(pKeySym);
 }
 
 static uint8_t Keymap_SymbolicToStScanCode_GR(const SDL_Keysym* pKeySym)
 {
 	/* no information available, default to US */
-	return Keymap_SymbolicToScanCode_US(pKeySym);
+	return Keymap_SymbolicToStScanCode_US(pKeySym);
 }
 
 #endif
