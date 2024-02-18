@@ -865,6 +865,12 @@ static uint8_t Keymap_SymbolicToStScanCode_RU(const SDL_Keysym* pKeySym)
 	return Keymap_SymbolicToStScanCode_US(pKeySym);
 }
 
+static uint8_t Keymap_SymbolicToStScanCode_RO(const SDL_Keysym* pKeySym)
+{
+	/* no information available, default to US */
+	return Keymap_SymbolicToStScanCode_US(pKeySym);
+}
+
 static uint8_t Keymap_SymbolicToStScanCode_GR(const SDL_Keysym* pKeySym)
 {
 	/* no information available, default to US */

@@ -1192,8 +1192,10 @@ int TOS_InitImage(void)
 		Log_Printf(LOG_WARN, "=> EmuTOS country code: %d (%s), %s\n",
 			   countrycode, TOS_LanguageName(countrycode),
 			   (osconf & 1) ? "PAL" : "NTSC");
+		Keymap_SetLayout(countrycode,1);
 	}
-	Keymap_SetCountry(countrycode);
+	else
+		Keymap_SetLayout(countrycode,(NvRam_Present() || (bIsEmuTOS && countrycode == TOS_LANG_ALL)) ? 1 : 0);
 
 	/*
 	 * patch some values into the "Draw logo" patch.

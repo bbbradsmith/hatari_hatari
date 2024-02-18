@@ -57,6 +57,7 @@ const char NvRam_fileid[] = "Hatari nvram.c";
 #include "main.h"
 #include "configuration.h"
 #include "ioMem.h"
+#include "keymap.h"
 #include "log.h"
 #include "nvram.h"
 #include "paths.h"
@@ -272,6 +273,10 @@ void NvRam_Reset(void)
 	clear_reg_c();
 
 	nvram_index = 0;
+
+	/* NVRAM may override keyboard mapping, inform Keymap */
+	if (NvRam_Present())
+		Keymap_SetLayout(nvram[NVRAM_KEYBOARDLAYOUT],2);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -538,6 +543,9 @@ void NvRam_Data_WriteByte(void)
 		Log_Printf(LOG_WARN, "Ignored write %d ($%02x) to read-only RTC/NVRAM status register %d!\n",
 			   value, value, nvram_index);
 		return;
+	case NVRAM_KEYBOARDLAYOUT:
+		Keymap_SetLayout(value,2);
+		break;
 	}
 	LOG_TRACE(TRACE_NVRAM, "NVRAM: write data at %d = %d ($%02x)\n", nvram_index, value, value);
 	nvram[nvram_index] = value;

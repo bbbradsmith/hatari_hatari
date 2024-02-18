@@ -18,6 +18,6 @@ extern void Keymap_KeyUp(const SDL_Keysym *sdlkey);
 extern void Keymap_SimulateCharacter(char asckey, bool press);
 extern int Keymap_GetKeyFromName(const char *name);
 extern const char *Keymap_GetKeyName(int keycode);
-extern void Keymap_SetCountry(int countrycode);
+extern void Keymap_SetLayout(int countrycode, int mode); /* 0=fixed TOS, 1=multilang TOS, 2=NVRAM override */
 
 #endif

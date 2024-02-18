@@ -73,7 +73,7 @@ static uint8_t (* const Keymap_SymbolicToStScanCodeFuncs[32])(const SDL_Keysym* 
 	Keymap_SymbolicToStScanCode_US, /* default */
 	Keymap_SymbolicToStScanCode_US, /* default */
 	Keymap_SymbolicToStScanCode_US, /* default */
-	Keymap_SymbolicToStScanCode_US, /* default */
+	Keymap_SymbolicToStScanCode_RO,
 	Keymap_SymbolicToStScanCode_US, /* default */
 	Keymap_SymbolicToStScanCode_US, /* default */
 	Keymap_SymbolicToStScanCode_US, /* default */
@@ -85,6 +85,7 @@ static uint8_t (* const Keymap_SymbolicToStScanCodeFuncs[32])(const SDL_Keysym* 
 
 static uint8_t (*Keymap_SymbolicToStScanCode)(const SDL_Keysym* pKeySym) =
 	Keymap_SymbolicToStScanCode_US;
+static int Keymap_MultiLang = 0;
 
 /*-----------------------------------------------------------------------*/
 /**
@@ -636,15 +637,26 @@ const char *Keymap_GetKeyName(int keycode)
 
 /*-----------------------------------------------------------------------*/
 /**
- * Informs symbolic keymap of loaded TOS country.
+ * Informs symbolic keymap of desired keyboard layout.
  */
-void Keymap_SetCountry(int countrycode)
+void Keymap_SetLayout(int countrycode, int mode)
 {
-	/* nCountryCode will override automatic selection from TOS */
+	if (mode != 2) /* 1 indicates multi-language TOS */
+		Keymap_MultiLang = mode;
+	else if (Keymap_MultiLang != 1) /* 2 indicates NVRAM, only allow it to override if multi-language TOS */
+		return;
+
+	/* nCountryCode will override automatic selection from TOS/NVRAM */
 	if (ConfigureParams.Keyboard.nCountryCode >= 0 &&
 	    ConfigureParams.Keyboard.nCountryCode <= 31)
 	{
 		countrycode = ConfigureParams.Keyboard.nCountryCode;
+	}
+	/* nKbdLayout will override TOS country and nCountrCode */
+	if (ConfigureParams.Keyboard.nKbdLayout >= 0 &&
+	    ConfigureParams.Keyboard.nKbdLayout <= 31)
+	{
+		countrycode = ConfigureParams.Keyboard.nKbdLayout;
 	}
 	/* Fall back to default if still unknown. */
 	if (countrycode < 0 || countrycode > 31)
