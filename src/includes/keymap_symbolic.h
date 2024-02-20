@@ -99,6 +99,7 @@ static uint8_t Keymap_SymbolicToStScanCode_US(const SDL_Keysym* pKeySym)
 	 case 161: code = 0x35; break; /* ¡ ES as ST °§ */
 	 case 178: code = 0x29; break; /* ² FR as ST `£ */
 	 case 180: code = 0x0D; break; /* ' DE */
+	 case 186: code = 0x2B; break; /* º ES as ST \ */
 	 case 223: code = 0x0C; break; /* ß DE */
 	 case 224: code = 0x28; break; /* à IT */
 	 case 228: code = 0x28; break; /* Ä DE */
@@ -651,6 +652,7 @@ static uint8_t Keymap_SymbolicToStScanCode_ES(const SDL_Keysym* pKeySym)
 	 case SDLK_z: code = 0x2C; break;
 	 case SDLK_DELETE: code = 0x53; break;
 	 case 161: code = 0x35; break; /* ¡ as § */
+	 case 186: code = 0x2B; break; /* º as ST \ */
 	 case 231: code = 0x29; break; /* Ç */
 	 case 241: code = 0x27; break; /* Ñ */
 	 case SDLK_KP_0: code = 0x70; break;
@@ -730,7 +732,7 @@ static uint8_t Keymap_SymbolicToStScanCode_IT(const SDL_Keysym* pKeySym)
 	 case SDLK_LEFTPAREN: code = 0x63; break;
 	 case SDLK_RIGHTPAREN: code = 0x64; break;
 	 case SDLK_ASTERISK: code = 0x66; break;
-	 case SDLK_PLUS: code = 0x4E; break;
+	 case SDLK_PLUS: code = 0x1B; break;
 	 case SDLK_COMMA: code = 0x33; break;
 	 case SDLK_MINUS: code = 0x35; break;
 	 case SDLK_PERIOD: code = 0x34; break;
