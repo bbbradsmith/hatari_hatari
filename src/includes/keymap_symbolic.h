@@ -96,8 +96,8 @@ static uint8_t Keymap_SymbolicToStScanCode_US(const SDL_Keysym* pKeySym)
 	 case SDLK_DELETE: code = 0x53; break;
 	 /* End of ASCII mapped keysyms */
 	 /* International key fallback */
-	 case 161: code = 0x35; break; /* ¡ ES as § */
-	 case 178: code = 0x29; break; /* ² FR as ` */
+	 case 161: code = 0x35; break; /* ¡ ES as ST °§ */
+	 case 178: code = 0x29; break; /* ² FR as ST `£ */
 	 case 180: code = 0x0D; break; /* ' DE */
 	 case 223: code = 0x0C; break; /* ß DE */
 	 case 224: code = 0x28; break; /* à IT */
@@ -320,7 +320,7 @@ static uint8_t Keymap_SymbolicToStScanCode_FR(const SDL_Keysym* pKeySym)
 	 case SDLK_RETURN: code = 0x1C; break;
 	 case SDLK_ESCAPE: code = 0x01; break;
 	 case SDLK_SPACE: code = 0x39; break;
-	 case SDLK_EXCLAIM: code = 0x09; break;
+	 case SDLK_EXCLAIM: code = 0x0D; break; /* !§ as ST -_ */
 	 case SDLK_QUOTEDBL: code = 0x04; break;
 	 case SDLK_HASH: code = 0x2B; break;
 	 case SDLK_DOLLAR: code = 0x1B; break;
@@ -328,7 +328,7 @@ static uint8_t Keymap_SymbolicToStScanCode_FR(const SDL_Keysym* pKeySym)
 	 case SDLK_QUOTE: code = 0x05; break;
 	 case SDLK_LEFTPAREN: code = 0x63; break;
 	 case SDLK_RIGHTPAREN: code = 0x64; break;
-	 case SDLK_ASTERISK: code = 0x66; break;
+	 case SDLK_ASTERISK: code = 0x2B; break; /* *µ as ST #|@~ */
 	 case SDLK_PLUS: code = 0x4E; break;
 	 case SDLK_COMMA: code = 0x32; break;
 	 case SDLK_MINUS: code = 0x0D; break;
@@ -384,7 +384,7 @@ static uint8_t Keymap_SymbolicToStScanCode_FR(const SDL_Keysym* pKeySym)
 	 case SDLK_y: code = 0x15; break;
 	 case SDLK_z: code = 0x11; break;
 	 case SDLK_DELETE: code = 0x53; break;
-	 case 178: code = 0x29; break; /* ² as ` */
+	 case 178: code = 0x29; break; /* ² as ST `£ */
 	 case 249: code = 0x28; break; /* ù */
 	 case SDLK_KP_0: code = 0x70; break;
 	 case SDLK_KP_1: code = 0x6D; break;
