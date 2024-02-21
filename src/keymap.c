@@ -94,6 +94,8 @@ static int Keymap_MultiLang = 0;
 void Keymap_Init(void)
 {
 	Keymap_LoadRemapFile(ConfigureParams.Keyboard.szMappingFileName);
+	Keymap_SymbolicToStScanCode = Keymap_SymbolicToStScanCode_US;
+	Keymap_MultiLang = 0;
 }
 
 
