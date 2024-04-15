@@ -97,14 +97,6 @@ static uint32_t num_inst;
 #define SIGN_PLUS  0
 #define SIGN_MINUS 1
 
-/* Defines some bits values for access to external memory (X, Y, P) */
-/* These values will set/unset the corresponding bits in the variable access_to_ext_memory */
-/* to detect how many access to the external memory were done for a single instruction */
-#define EXT_X_MEMORY 0
-#define EXT_Y_MEMORY 1
-#define EXT_P_MEMORY 2
-
-
 /**********************************
  *	Variables
  **********************************/
@@ -706,13 +698,6 @@ const char *dsp_interrupt_name[32] = {
 	"Unknown", "Unknown", "Unknown", "Illegal"
 };
 
-static struct {
-	int limit;
-	int count;
-	uint32_t inst;
-	uint16_t pc;
-} dsp_error;
-
 
 /**********************************
  *	Emulator kernel
@@ -722,8 +707,6 @@ void dsp56k_init_cpu(void)
 {
 	dsp56k_disasm_init();
 	isDsp_in_disasm_mode = false;
-	memset(&dsp_error, 0, sizeof(dsp_error));
-	dsp_error.limit = 1;
 #if DSP_COUNT_IPS
 	start_time = SDL_GetTicks();
 	num_inst = 0;
@@ -818,9 +801,9 @@ void dsp56k_execute_instruction(void)
 	/* Add the waitstate due to external memory access */
 	/* (2 extra cycles per extra access to the external memory after the first one */
 	if (access_to_ext_memory != 0) {
-		value = access_to_ext_memory & 1;
-		value += (access_to_ext_memory & 2) >> 1;
-		value += (access_to_ext_memory & 4) >> 2;
+		value  = (access_to_ext_memory >> DSP_SPACE_X) & 1;
+		value += (access_to_ext_memory >> DSP_SPACE_Y) & 1;
+		value += (access_to_ext_memory >> DSP_SPACE_P) & 1;
 
 		if (value > 1)
 			dsp_core.instr_cycle += (value - 1) * 2;
@@ -1206,13 +1189,14 @@ static void dsp_ccr_update_e_u_n_z(uint32_t reg0, uint32_t reg1, uint32_t reg2)
 
 static uint32_t read_memory_disasm(int space, uint16_t address)
 {
+	/* Program memory space ? */
+	if (space==DSP_SPACE_P) {
+		return read_memory_p(address);
+	}
+
 	/* Internal RAM ? */
 	if (address<0x100) {
 		return dsp_core.ramint[space][address] & BITMASK(24);
-	}
-
-	if (space==DSP_SPACE_P) {
-		return read_memory_p(address);
 	}
 
 	/* Internal ROM? */
@@ -1235,7 +1219,7 @@ static uint32_t read_memory_disasm(int space, uint16_t address)
 	/* Falcon: External RAM, map X to upper 16K of matching space in Y,P */
 	address &= (DSP_RAMSIZE>>1) - 1;
 	if (space == DSP_SPACE_X) {
-		address += DSP_RAMSIZE>>1;
+		address |= DSP_RAMSIZE>>1;
 	}
 
 	/* Falcon: External RAM, finally map X,Y to P */
@@ -1250,7 +1234,7 @@ static inline uint32_t read_memory_p(uint16_t address)
 	}
 
 	/* Access to the external P memory */
-	access_to_ext_memory |= 1 << EXT_P_MEMORY;
+	access_to_ext_memory |= 1 << DSP_SPACE_P;
 
 	/* External RAM, mask address to available ram size */
 	return dsp_core.ramext[address & (DSP_RAMSIZE-1)] & BITMASK(24);
@@ -1260,13 +1244,14 @@ static uint32_t read_memory(int space, uint16_t address)
 {
 	uint32_t value;
 
-		/* Internal RAM ? */
-	if (address < 0x100) {
-		return dsp_core.ramint[space][address] & BITMASK(24);
-	}
-
+	/* Program memory space ? */
 	if (space == DSP_SPACE_P) {
 		return read_memory_p(address);
+	}
+
+	/* Internal RAM ? */
+	if (address < 0x100) {
+		return dsp_core.ramint[space][address] & BITMASK(24);
 	}
 
 	/* Internal ROM ? */
@@ -1291,21 +1276,16 @@ static uint32_t read_memory(int space, uint16_t address)
 		return value;
 	}
 
+	/* Access to external memory */
+	access_to_ext_memory |= 1 << space;
+
 	/* Falcon: External X or Y RAM access */
 	address &= (DSP_RAMSIZE>>1) - 1;
 
 	if (space == DSP_SPACE_X) {
 		/* Map X to upper 16K of matching space in Y,P */
-		address += DSP_RAMSIZE>>1;
-
-		/* Set one access to the X external memory */
-		access_to_ext_memory |= 1 << EXT_X_MEMORY;
+		address |= DSP_RAMSIZE>>1;
 	}
-	else {
-		/* Access to the Y external memory */
-		access_to_ext_memory |= 1 << EXT_Y_MEMORY;
-	}
-
 
 	/* Falcon: External RAM, finally map X,Y to P */
 	return dsp_core.ramext[address & (DSP_RAMSIZE-1)] & BITMASK(24);
@@ -1413,24 +1393,18 @@ static void write_memory_raw(int space, uint16_t address, uint32_t value)
 		}
 	}
 
+	/* Access to external memory */
+	access_to_ext_memory |= 1 << space;
+
 	/* Access to X, Y or P external RAM */
 
-	if (space == DSP_SPACE_P) {
-		/* Access to the P external RAM */
-		access_to_ext_memory |= 1 << EXT_P_MEMORY;
-	}
-	else {
+	if (space != DSP_SPACE_P) {
 		address &= (DSP_RAMSIZE>>1) - 1;
 
 		if (space == DSP_SPACE_X) {
 			/* Access to the X external RAM */
 			/* map X to upper 16K of matching space in Y,P */
-			address += DSP_RAMSIZE>>1;
-			access_to_ext_memory |= 1;
-		}
-		else {
-			/* Access to the Y external RAM */
-			access_to_ext_memory |= 1 << EXT_Y_MEMORY;
+			address |= DSP_RAMSIZE>>1;
 		}
 	}
 
@@ -1519,7 +1493,7 @@ static void dsp_write_reg(uint32_t numreg, uint32_t value)
 				dsp_set_interrupt(DSP_INTER_STACK_ERROR, 1);
 				dsp_core.registers[DSP_REG_SP] = value & (3<<DSP_SP_SE);
 				if (!isDsp_in_disasm_mode)
-					fprintf(stderr,"Dsp: Stack Overflow or Underflow\n");
+					Log_Printf(LOG_WARN, "Dsp: Stack Overflow or Underflow\n");
 				if (ExceptionDebugMask & EXCEPT_DSP)
 					DebugUI(REASON_DSP_EXCEPTION);
 			}
@@ -1562,7 +1536,7 @@ static void dsp_stack_push(uint32_t curpc, uint32_t cursr, uint16_t sshOnly)
 		/* Stack full, raise interrupt */
 		dsp_set_interrupt(DSP_INTER_STACK_ERROR, 1);
 		if (!isDsp_in_disasm_mode)
-			fprintf(stderr,"Dsp: Stack Overflow\n");
+			Log_Printf(LOG_WARN, "Dsp: Stack Overflow\n");
 		if (ExceptionDebugMask & EXCEPT_DSP)
 			DebugUI(REASON_DSP_EXCEPTION);
 	}
@@ -1599,7 +1573,7 @@ static void dsp_stack_pop(uint32_t *newpc, uint32_t *newsr)
 		/* Stack empty*/
 		dsp_set_interrupt(DSP_INTER_STACK_ERROR, 1);
 		if (!isDsp_in_disasm_mode)
-			fprintf(stderr,"Dsp: Stack underflow\n");
+			Log_Printf(LOG_WARN, "Dsp: Stack underflow\n");
 		if (ExceptionDebugMask & EXCEPT_DSP)
 			DebugUI(REASON_DSP_EXCEPTION);
 	}
@@ -1719,7 +1693,7 @@ static void dsp_update_rn_modulo(uint32_t numreg, int16_t modifier)
 
 	if (abs_modifier>modulo) {
 		if (abs_modifier&bufmask) {
-			fprintf(stderr,"Dsp: Modulo addressing result unpredictable\n");
+			Log_Printf(LOG_WARN, "Dsp: Modulo addressing result unpredictable\n");
 		} else {
 			r_reg += modifier;
 		}
@@ -1915,28 +1889,11 @@ static void dsp_undefined(void)
 {
 	if (isDsp_in_disasm_mode == false) {
 		cur_inst_len = 0;
+		Log_Printf(LOG_WARN, "Dsp: 0x%04x: 0x%06x Illegal instruction\n",dsp_core.pc, cur_inst);
 		/* Add some artificial CPU cycles to avoid being stuck in an infinite loop */
 		dsp_core.instr_cycle += 100;
-
-		/* Rate limit identical messages. Required to make
-		 * "Terrorize your soul" demo run at usable speed
-		 */
-		dsp_error.count++;
-		if (cur_inst != dsp_error.inst || dsp_core.pc != dsp_error.pc ||
-		    dsp_error.count >= dsp_error.limit) {
-			dsp_error.inst = cur_inst;
-			dsp_error.pc = dsp_core.pc;
-			fprintf(stderr, "Dsp: 0x%04hx: 0x%06x Illegal instruction (%dx times)\n",
-				dsp_error.pc, dsp_error.inst, dsp_error.count);
-			if (dsp_error.count >= dsp_error.limit) {
-				/* next message after 2x more hits */
-				dsp_error.limit *= 2;
-			} else {
-				dsp_error.limit = 1;
-			}
-			dsp_error.count = 0;
-		}
-	} else {
+	}
+	else {
 		cur_inst_len = 1;
 		dsp_core.instr_cycle = 0;
 	}

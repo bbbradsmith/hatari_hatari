@@ -17,7 +17,7 @@
 
 
 #define UAEMAJOR 5
-#define UAEMINOR 0
+#define UAEMINOR 1
 #define UAESUBREV 0
 
 #define MAX_AMIGADISPLAYS 4
@@ -616,6 +616,7 @@ struct uae_prefs {
 	int genlock_scale;
 	int genlock_aspect;
 	int genlock_effects;
+	int genlock_offset_x, genlock_offset_y;
 	uae_u64 ecs_genlock_features_colorkey_mask[4];
 	uae_u8 ecs_genlock_features_plane_mask;
 	bool genlock_alpha;
@@ -723,6 +724,7 @@ struct uae_prefs {
 	int cs_eclocksync;
 	bool cs_memorypatternfill;
 	bool cs_ipldelay;
+	bool cs_floppydatapullup;
 	uae_u32 seed;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
@@ -903,6 +905,8 @@ struct uae_prefs {
 	bool win32_filesystem_mangle_reserved_names;
 	bool win32_shutdown_notification;
 	bool win32_warn_exit;
+	win32_gui_control;
+	win32_videograb_balance;
 	bool right_control_is_right_win_key;
 #ifdef WITH_SLIRP
 	struct slirp_redir slirp_redirs[MAX_SLIRP_REDIRS];

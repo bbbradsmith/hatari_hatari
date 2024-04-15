@@ -457,19 +457,19 @@ char szPath[FILENAME_MAX] ;											// for general use
 
 @end
 /*----------------------------------------------------------------------*/
-static int IsRootCwd()
+static int IsRootCwd(void)
 {
 	char buf[MAXPATHLEN];
 	char *cwd = getcwd(buf, sizeof (buf));
 	return (cwd && (strcmp(cwd, "/") == 0));
 }
 /*----------------------------------------------------------------------*/
-static int IsTenPointNineOrLater()
+static int IsTenPointNineOrLater(void)
 {
 	// OK for 10.9, but before ??
 	NSOperatingSystemVersion systemVersion = [[NSProcessInfo processInfo] operatingSystemVersion];
-	return ((systemVersion.majorVersion == 10) && (systemVersion.minorVersion>=9)
-			|| systemVersion.majorVersion > 10);
+	return (systemVersion.majorVersion == 10 && systemVersion.minorVersion >= 9)
+			|| systemVersion.majorVersion > 10;
 }
 /*----------------------------------------------------------------------*/
 static int IsFinderLaunch(const int argc, char **argv)

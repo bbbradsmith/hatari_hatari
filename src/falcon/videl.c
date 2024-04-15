@@ -141,9 +141,6 @@ void VIDEL_reset(void)
 	/* Reset IO register (some are not initialized by TOS) */
 	IoMem_WriteWord(0xff820e, 0);    /* Line offset */
 	IoMem_WriteWord(0xff8264, 0);    /* Horizontal scroll */
-
-	/* Init sync mode register */
-	VIDEL_SyncMode_WriteByte();
 }
 
 /**
@@ -160,6 +157,48 @@ void VIDEL_MemorySnapShot_Capture(bool bSave)
 	if (!bSave)
 		Videl_SetDefaultSavedRes();
 }
+
+
+/**
+ * Return the vertical refresh rate for the current video mode
+ * We use the following formula :
+ *   VFreq = ( HFreq / (VFT+1) ) * 2
+ * HFreq is 15625 Hz in RGB/TV mode or 31250 Hz in VGA mode (in VGA mode HFreq can take other values in the same range)
+ *
+ * Some VFT values set by TOS :
+ *  - 320x200 16 colors, RGB : VFT = 625	-> 50 Hz
+ *  - 320x200 16 colors, VGA : VFT = 1049	-> 60 Hz
+ */
+int VIDEL_Get_VFreq(void)
+{
+	int	HFreq;
+	int	VFT;
+	int	VFreq;
+
+	if ( IoMem_ReadWord(0xff82c0) & 4 )		/* VC0 : bit2=0 32 MHz   bit2=1 25 MHz */
+		HFreq = 31250;				/* 25 MHz, VGA */
+	else
+		HFreq = 15625;				/* 32 MHz, RGB */
+
+	VFT = IoMem_ReadWord(0xff82a2);
+
+
+	VFreq = round ( ( (double)HFreq / ( VFT+1 ) ) * 2 );
+
+	return VFreq;
+}
+
+
+/**
+ * Return the content of videl.bUseSTShifter.
+ * This tells if the current video mode is compatible with ST/STE
+ * video mode or not
+ */
+bool VIDEL_Use_STShifter(void)
+{
+	return videl.bUseSTShifter;
+}
+
 
 /**
  * Monitor write access to Falcon color palette registers
@@ -185,22 +224,19 @@ void VIDEL_Monitor_WriteByte(void)
 }
 
 /**
- * VIDEL_SyncMode_WriteByte : Videl synchronization mode.
- *             $FFFF820A [R/W] _______0  .................................. SYNC-MODE
-                                     ||
-                                     |+--Synchronisation [ 0:internal / 1:external ]
-                                     +---Vertical frequency [ Read-only bit ]
-                                         [ Monochrome monitor:0 / Colour monitor:1 ]
+ * VIDEL_SyncMode_WriteByte:
+ * Videl synchronization mode. Bit 1 is used by TOS 4.04 to set either 50 Hz
+ * (bit set) or 60 Hz (bit cleared).
+ * Note: There are documentation files out there that claim that bit 1 is
+ * used to distinguish between monochrome or color monitor, but these are
+ * definitely wrong.
  */
 void VIDEL_SyncMode_WriteByte(void)
 {
 	Uint8 syncMode = IoMem_ReadByte(0xff820a);
 	LOG_TRACE(TRACE_VIDEL, "Videl : $ff820a Sync Mode write: 0x%02x\n", syncMode);
 
-	if (videl.monitor_type == FALCON_MONITOR_MONO)
-		syncMode &= 0xfd;
-	else
-		syncMode |= 0x2;
+	syncMode &= 0x03;	/* Upper bits are hard-wired to 0 */
 
 	IoMem_WriteByte(0xff820a, syncMode);
 }

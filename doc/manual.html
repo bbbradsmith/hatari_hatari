@@ -169,7 +169,7 @@ common to all (FDC, IKBD, MFP, MIDI, PSG, RS-232...).</p>
     <tr>
       <td class="hwfeat">MMU</td>
       <td>[x]</td><td>[x]</td><td>[x]</td><td>[x]</td><td>X</td><td>X</td>
-      <td class="hwnote">[x] = Needs 68030+ CPU, requires 512k EmuTOS or TOS 2.06</td>
+      <td class="hwnote">[x] = Needs 68030+ CPU, requires 512k/1024k EmuTOS or TOS 2.06</td>
     </tr>
     <tr>
       <td class="hwfeat">FPU</td>
@@ -191,7 +191,7 @@ common to all (FDC, IKBD, MFP, MIDI, PSG, RS-232...).</p>
     <tr>
       <td class="hwfeat">SCC A/B serial</td>
       <td></td><td></td><td></td><td>X</td><td>X</td><td>X</td>
-      <td class="hwnote">Only partial support in Hatari</td>
+      <td class="hwnote">Full support, including LAN port on MegaSTE/TT</td>
     </tr>
     <tr>
       <td class="hwfeat">TT-RAM +<br/>32-bit addressing</td>
@@ -218,7 +218,7 @@ common to all (FDC, IKBD, MFP, MIDI, PSG, RS-232...).</p>
   </tfoot>
 </table>
 
-<p>(EmuTOS v1.1+ included with Hatari binary packages supports
+<p>(EmuTOS v1.3+ included with Hatari binary packages supports
 all Atari HW except for Falcon 16-bit Videl TrueColor mode.)</p>
 
 
@@ -240,7 +240,7 @@ all Atari HW except for Falcon 16-bit Videl TrueColor mode.)</p>
   <li>support for whole system state snapshot save/restore</li>
   <li>driver for extended VDI resolutions</li>
   <li>sound recording as .WAV or .YM files</li>
-  <li>screenshots in PNG or BMP format</li>
+  <li>screenshots in PNG, BMP, NEO or XIMG format</li>
   <li>AVI video capture with sound</li>
   <li>emulation speedup, slowdown and pause support</li>
   <li>Built-in <a href="debugger.html">debugger and profiler</a>
@@ -302,7 +302,7 @@ all Atari HW except for Falcon 16-bit Videl TrueColor mode.)</p>
   <li>4096 colors STE palette</li>
   <li>Stereo DMA sample sound</li>
   <li>Microwire/LMC1992 emulation</li>
-  <li>STE joypads</li>
+  <li>STE joypads (a.k.a. JagPad / PowerPad)</li>
   <li>TOS versions 1.06, 1.62, 2.05 and 2.06 (and EmuTOS) can be used in STE mode.</li>
 </ul>
 
@@ -323,7 +323,7 @@ and later HW:</p>
   <li>Second (TT) MFP chip</li>
   <li>ST/TT palette switching and video shifter</li>
   <li>Up to 1024 MiB of TT-RAM and 32-bit memory addressing</li>
-  <li>Only TOS version 3.05 and 3.06 (and 512k EmuTOS) can be used in TT mode.</li>
+  <li>Only TOS version 3.05 and 3.06 (and 512k/1024k EmuTOS) can be used in TT mode.</li>
 </ul>
 
 <h4>Falcon hardware emulation</h4>
@@ -340,7 +340,7 @@ and later HW:</p>
       sample rates</li>
   <li>Experimental IDE master and slave emulation for hard drive support</li>
   <li>Experimental NCR5380 SCSI emulation for hard drive support (incomplete)</li>
-  <li>TOS versions 4.00, 4.02, 4.04 and 4.92 (and 512k EmuTOS) can be used in Falcon
+  <li>TOS versions 4.00, 4.02, 4.04 and 4.92 (and 512k/1024k EmuTOS) can be used in Falcon
       mode. There is also experimental support for TOS 2.07 (the "Sparrow"-TOS),
       and for <a href="m68k-linux.txt">Linux</a>, but they are not recommended
       for use yet</li>
@@ -455,12 +455,14 @@ release versions of Hatari. EmuTOS is an open-source TOS clone. You can find
 it at:
 <a href="https://emutos.sourceforge.io/">https://emutos.sourceforge.io/</a>.
 While it works fine with most Atari software, it is not the best
-solution for Falcon emulation due to missing features, or for playing
-old (disk only) games and other software tied to specific TOS version(s)
-(see <span class="file">emutos.txt</span> for more details).
-However, it is free, its 512k version supports all Atari machines
-emulated by Hatari, it does not require a driver to support harddisk
-images, and it boots faster than original TOS.</p>
+solution for Falcon emulation due to missing TrueColor mode support,
+or for playing old (disk only) games and other software tied to
+specific TOS version(s) (see <span class="file">emutos.txt</span>
+for more details).
+However, it is free, its 1024k version supports all Atari machines
+emulated by Hatari, it supports more languages than original TOS, does
+not require a driver to support harddisk images, and it boots faster
+than original TOS.</p>
 <p>If you do not specify a TOS image on the commandline and Hatari
 cannot find a suitable TOS image in the default dir, you'll get the
 chance to select a TOS image file from the GUI. </p>
@@ -800,6 +802,8 @@ with clearly smaller CPU overhead.</p>
 <p class="paramdesc">Use &lt;file&gt; to record AVI</p>
 <p class="parameter">--screenshot-dir &lt;dir&gt;</p>
 <p class="paramdesc">Save screenshots in the directory &lt;dir&gt;</p>
+<p class="parameter">--screenshot-format &lt;x&gt;</p>
+<p class="paramdesc">Select screenshot file format (x = bmp/png/neo/ximg).</p>
 
 <h3>Devices options</h3>
 <p class="parameter">-j,
@@ -825,16 +829,28 @@ to &lt;file&gt;</p>
 &lt;filename&gt;</p>
 <p class="paramdesc">Enable MIDI support and read MIDI data from &lt;file&gt;
 (when not built with PortMidi support)</p>
-<p class="parameter">--rs232-in
-&lt;filename&gt;</p>
+<p class="parameter">--rs232-in &lt;filename&gt;</p>
 <p class="paramdesc">Enable MFP serial port support and use
 &lt;file&gt; as the input device</p>
-<p class="parameter">--rs232-out
-&lt;filename&gt;</p>
+<p class="parameter">--rs232-out &lt;filename&gt;</p>
 <p class="paramdesc">Enable MFP serial port support and use
 &lt;file&gt; as the output device</p>
-<p class="parameter">--scc-b-out
-&lt;filename&gt;</p>
+<p class="parameter">--scc-a-in &lt;filename&gt;</p>
+<p class="paramdesc">Enable SCC channel A serial port support and use
+&lt;file&gt; for the input (only for Mega-STE, TT and Falcon)</p>
+<p class="parameter">--scc-a-out &lt;filename&gt;</p>
+<p class="paramdesc">Enable SCC channel A serial port support and use
+&lt;file&gt; for the output (only for Mega-STE, TT and Falcon)</p>
+<p class="parameter">--scc-a-lan-in &lt;filename&gt;</p>
+<p class="paramdesc">Enable SCC channel A LAN port support and use
+&lt;file&gt; for the input (only for Mega-STE and TT)</p>
+<p class="parameter">--scc-a-lan-out &lt;filename&gt;</p>
+<p class="paramdesc">Enable SCC channel A LAN port support and use
+&lt;file&gt; for the output (only for Mega-STE and TT)</p>
+<p class="parameter">--scc-b-in &lt;filename&gt;</p>
+<p class="paramdesc">Enable SCC channel B serial port support and use
+&lt;file&gt; for the input (only for Mega-STE, TT and Falcon)</p>
+<p class="parameter">--scc-b-out &lt;filename&gt;</p>
 <p class="paramdesc">Enable SCC channel B serial port support and use
 &lt;file&gt; for the output (only for Mega-STE, TT and Falcon)</p>
 
@@ -1432,7 +1448,7 @@ changes that you have made.
 <p>
  The &quot;Cycle exact&quot;, the &quot;MMU emulation&quot; and
  &quot;24-bit addressing&quot; options are considered as experimental and
- should only be changed iif you know what you are doing.
+ should only be changed if you know what you are doing.
 </p>
 
 <h5>FPU type</h5>
@@ -1688,7 +1704,8 @@ Joystick 0 emulates a joystick plugged into the ST mouse port
 and is often used in games for two players.</p>
 <p>With STE joypad A and B, you can enable the emulation of Jaguar joypads
 which are plugged in the enhanced joystick ports of the Atari STE.
-Only very few STE games support these joypads, so you often won't need this.</p>
+Only very few STE games support these joypads, so you often won't need this
+(but some Falcon games require them).</p>
 <p>Finally, Hatari also emulates joysticks which were plugged on the parallel
 port with a special adapter on a real ST. These were used in some few
 multi-player games like "Gauntlet 2".</p>
@@ -1852,8 +1869,13 @@ Note that zooming takes additional CPU computing time and should
 not be enabled on very slow computers.
 </p>
 <p>Click the <span class="button">Screenshot</span> button to create
-a screenshot in PNG (or BMP) format to the current working directory
-or click the <span class="button">Record&nbsp;AVI</span> button to
+a screenshot in the selected format to the current working directory.
+PNG and BMP formats will match the visual output of Hatari.
+NEO and XIMG formats will produce Atari ST native images, but will not include
+borders, or raster palette effects. NEO is limited to the 3 standard ST
+resolutions.
+</p>
+<p>Click the <span class="button">Record&nbsp;AVI</span> button to
 record an AVI format video of Hatari screen (and audio) output.
 </p>
 <p>
@@ -2337,6 +2359,140 @@ wired on the ST, STE and TT machines, but not on the Falcon. To use serial
 port emulation in Falcon mode, you have to use the &ldquo;SCC channel B&rdquo;
 emulation instead.</p>
 
+<p>There're several programs that can be used with RS232 and the various ports</p>
+<p>"CoNnect 95" is recommended as it supports all the ports of each machine
+(ST/STE, MegaSTE, TT and Falcon). Although this program was commercial and needed
+to be registered, his author released it later as freeware in 1998</p>
+
+<p>The following table shows all the available ports (serial or lan) depending
+on the machine type, as well as the corresponding options used to setup each port</p>
+
+<table class="keytable" style="border-collapse:collapse;" >
+  <thead>
+    <tr class="backdropped" style="text-align:center;">
+      <td class="hwfeat">Port Name</td>
+      <td style="width:6%;">HW</td>
+      <td style="width:6%;">Physical Port </td>
+      <td style="width:15%;">Corresponding Options</td>
+      <td class="hwnote">Notes</td>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr class="backdropped" style="text-align:center;">
+      <td colspan="5" class="hwsubdiv">ST / STE / MegaST</td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Serial</td>
+      <td>MFP</td>
+      <td>RS232C DB-25</td>
+      <td>--rs232-in and --rs232-out</td>
+      <td class="hwnote"></td>
+    </tr>
+
+    <tr class="backdropped" style="text-align:center;">
+      <td colspan="5" class="hwsubdiv">MegaSTE</td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Modem 1</td>
+      <td>MFP</td>
+      <td>RS232C DB-25</td>
+      <td>--rs232-in and --rs232-out</td>
+      <td class="hwnote"></td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Serial 2</td>
+      <td>SCC A</td>
+      <td>RS232C DP-9P</td>
+      <td>--scc-a-in and --scc-a-out</td>
+      <td class="hwnote">Using daughter board in the VME slot</td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Lan</td>
+      <td>SCC A</td>
+      <td>RS422 MiniDIN 8p</td>
+      <td>--scc-a-lan-in and --scc-a-lan-out</td>
+      <td class="hwnote"></td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Modem 2</td>
+      <td>SCC B</td>
+      <td>RS232C DP-9P</td>
+      <td>--scc-b-in and --scc-b-out</td>
+      <td class="hwnote"></td>
+    </tr>
+
+    <tr class="backdropped" style="text-align:center;">
+      <td colspan="5" class="hwsubdiv">TT</td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Modem 1</td>
+      <td>MFP</td>
+      <td>RS232C DB-25</td>
+      <td>--rs232-in and --rs232-out</td>
+      <td class="hwnote"></td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Serial 1</td>
+      <td>TT MFP</td>
+      <td>RS232C DP-9P</td>
+      <td></td>
+      <td class="hwnote">Only 3 wires, not really usable (not emulated), using daughter board in the VME slot</td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Serial 2</td>
+      <td>SCC A</td>
+      <td>RS232C DP-9P</td>
+      <td>--scc-a-in and --scc-a-out</td>
+      <td class="hwnote">Using daughter board in the VME slot</td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Lan</td>
+      <td>SCC A</td>
+      <td>RS422 MiniDIN 8p</td>
+      <td>--scc-a-lan-in and --scc-a-lan-out</td>
+      <td class="hwnote"></td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Modem 2</td>
+      <td>SCC B</td>
+      <td>RS232C DP-9P</td>
+      <td>--scc-b-in and --scc-b-out</td>
+      <td class="hwnote"></td>
+    </tr>
+
+    <tr class="backdropped" style="text-align:center;">
+      <td colspan="5" class="hwsubdiv">Falcon</td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Lan</td>
+      <td>SCC A</td>
+      <td>RS422 MiniDIN 8p</td>
+      <td>--scc-a-lan-in and --scc-a-lan-out</td>
+      <td class="hwnote"></td>
+    </tr>
+    <tr>
+      <td class="hwfeat">Modem</td>
+      <td>SCC B</td>
+      <td>RS232C DP-9P</td>
+      <td>--scc-b-in and --scc-b-out</td>
+      <td class="hwnote"></td>
+    </tr>
+
+  </tbody>
+  <tfoot>
+    <tr class="backdropped" style="text-align:center;">
+      <td class="hwfeat">Port Name</td>
+      <td style="width:6%;">HW</td>
+      <td style="width:6%;">Physical Port </td>
+      <td style="width:6%;">Corresponding Options</td>
+      <td class="hwnote">Notes</td>
+    </tr>
+  </tfoot>
+</table>
+
+
+
 <h2 id="Floppy_disk_images">Floppy disk images</h2>
 
 <p>Hatari does not use floppy disks directly but disk images due to
@@ -2540,7 +2696,7 @@ with GEMDOS HD emulation. Such things need to be run from a real hard disk
 image, or in case of MiNT, use OLDTOSFS for GEMDOS HD access.</li>
 <li>GEMDOS HD file handles start from index 64.  If programs have more
 files open on <i>non-GEMDOS HD drives</i>, i.e. their indexes increase
-over 64, acesses to those indexes could get routed (incorrectly) to
+over 64, accesses to those indexes could get routed (incorrectly) to
 GEMDOS HD drive instead</li>
 <li>GEMDOS HD supports up to 64 file handles (TOS supports slightly more).</li>
 <li>GEMDOS HD drive assignment can conflict with the ACSI and IDE hard
