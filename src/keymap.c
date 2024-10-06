@@ -76,11 +76,11 @@ static uint8_t Keymap_SymbolicToStScanCode_US(const SDL_Keysym* keysym)
 	 case SDLK_RETURN: code = 0x1C; break;
 	 case SDLK_ESCAPE: code = 0x01; break;
 	 case SDLK_SPACE: code = 0x39; break;
-	 case SDLK_EXCLAIM: code = 0x02; break; /* FR host only */
-	 case SDLK_QUOTEDBL: code = 0x28; break;/* FR host only */
-	 case SDLK_HASH: code = 0x04; break; /* DE, UK host only */
-	 case SDLK_DOLLAR: code = 0x05; break; /* CHFR/CHDE host only */
-	 case SDLK_AMPERSAND: code = 0x08; break; /* ? host */
+	 case SDLK_EXCLAIM: code = 0x02; break; /* non-US */
+	 case SDLK_QUOTEDBL: code = 0x28; break;/* non-US */
+	 case SDLK_HASH: code = 0x04; break; /* non-US */
+	 case SDLK_DOLLAR: code = 0x05; break; /* non-US */
+	 case SDLK_AMPERSAND: code = 0x08; break; /* non-US */
 	 case SDLK_QUOTE: code = 0x28; break;
 	 case SDLK_LEFTPAREN: code = 0x63; break;
 	 case SDLK_RIGHTPAREN: code = 0x64; break;
@@ -102,16 +102,16 @@ static uint8_t Keymap_SymbolicToStScanCode_US(const SDL_Keysym* keysym)
 	 case SDLK_9: code = 0x0A; break;
 	 case SDLK_COLON: code = 0x27; break;
 	 case SDLK_SEMICOLON: code = 0x27; break;
-	 case SDLK_LESS: code = 0x33; break;
+	 case SDLK_LESS: code = 0x33; break; /* non-US */
 	 case SDLK_EQUALS: code = 0x0D; break;
-	 case SDLK_GREATER: code = 0x34; break;
+	 case SDLK_GREATER: code = 0x34; break; /* non-US */
 	 case SDLK_QUESTION: code = 0x35; break;
-	 case SDLK_AT: code = 0x03; break;
+	 case SDLK_AT: code = 0x03; break;  /* non-US */
 	 case SDLK_LEFTBRACKET: code = 0x1A; break;
 	 case SDLK_BACKSLASH: code = 0x2B; break;
 	 case SDLK_RIGHTBRACKET: code = 0x1B; break;
-	 case SDLK_CARET: code = 0x06; break;
-	 case SDLK_UNDERSCORE: code = 0x0C; break;
+	 case SDLK_CARET: code = 0x06; break; /* non-US */
+	 case SDLK_UNDERSCORE: code = 0x0C; break;  /* non-US */
 	 case SDLK_BACKQUOTE: code = 0x29; break;
 	 case SDLK_a: code = 0x1E; break;
 	 case SDLK_b: code = 0x30; break;
@@ -337,6 +337,7 @@ static uint8_t Keymap_SymbolicToStScanCode_ES(const SDL_Keysym* keysym)
 	uint8_t code;
 	switch (keysym->sym)
 	{
+	 case SDLK_EXCLAIM: code = 0x34; break;
 	 case SDLK_QUOTEDBL: code = 0x1A; break;
 	 case SDLK_HASH: code = 0x2B; break;
 	 case SDLK_AMPERSAND: code = 0x08; break;
@@ -478,7 +479,6 @@ static uint8_t Keymap_SymbolicToStScanCode_NO(const SDL_Keysym* keysym)
 {
 	switch (keysym->sym)
 	{
-	 case SDLK_EXCLAIM: return 0x09;
 	 case SDLK_QUOTEDBL: return 0x04;
 	 case SDLK_HASH: return 0x29;
 	 case SDLK_DOLLAR: return 0x1B;
@@ -503,7 +503,6 @@ static uint8_t Keymap_SymbolicToStScanCode_DK(const SDL_Keysym* keysym)
 {
 	switch (keysym->sym)
 	{
-	 case SDLK_EXCLAIM: return 0x09;
 	 case SDLK_QUOTEDBL: return 0x04;
 	 case SDLK_HASH: return 0x29;
 	 case SDLK_DOLLAR: return 0x1B;
@@ -528,7 +527,6 @@ static uint8_t Keymap_SymbolicToStScanCode_NL(const SDL_Keysym* keysym)
 {
 	switch (keysym->sym)
 	{
-	 case SDLK_EXCLAIM: return 0x09;
 	 case SDLK_QUOTEDBL: return 0x04;
 	 case SDLK_DOLLAR: return 0x1B;
 	 case SDLK_AMPERSAND: return 0x02;
