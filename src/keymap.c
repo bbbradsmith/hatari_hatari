@@ -65,7 +65,7 @@ void Keymap_Init(void)
  * which generally represent extra keys present for one or two host languages,
  * not necessarily used by the US mapping.
  */
-static uint8_t Keymap_SymbolicToStScanCode_US(const SDL_Keysym* keysym)
+static uint8_t Keymap_SymbolicToStScanCode_default(const SDL_Keysym* keysym)
 {
 	uint8_t code;
 	switch (keysym->sym)
@@ -220,7 +220,16 @@ static uint8_t Keymap_SymbolicToStScanCode_US(const SDL_Keysym* keysym)
 	 case SDLK_UNDO: code = 0x61; break;
 	 default: code = ST_NO_SCANCODE;
 	}
+	return code;
+}
 
+static uint8_t Keymap_SymbolicToStScanCode_US(const SDL_Keysym* keysym)
+{
+	uint8_t code;
+	switch (keysym->sym)
+	{
+		default: code = Keymap_SymbolicToStScanCode_default(keysym);
+	}
 	return code;
 }
 
@@ -256,7 +265,7 @@ static uint8_t Keymap_SymbolicToStScanCode_DE(const SDL_Keysym* keysym)
 	 /* case 228: code = 0x28; break;  Ä */
 	 /* case 246: code = 0x27; break;  Ö */
 	 /* case 252: code = 0x1A; break;  Ü */
-	 default: code = Keymap_SymbolicToStScanCode_US(keysym);
+	 default: code = Keymap_SymbolicToStScanCode_default(keysym);
 	}
 	return code;
 }
@@ -300,7 +309,7 @@ static uint8_t Keymap_SymbolicToStScanCode_FR(const SDL_Keysym* keysym)
 	 case 232: code = 0x08; break; /* è IT/CHFR or BÉPO FR as ST è7 */
 	 case 233: code = 0x03; break; /* é CHFR or BÉPO FR as ST é2 */
 	 /* case 249: code = 0x28; break;  ù */
-	 default: code = Keymap_SymbolicToStScanCode_US(keysym);
+	 default: code = Keymap_SymbolicToStScanCode_default(keysym);
 	}
 	return code;
 }
@@ -327,7 +336,7 @@ static uint8_t Keymap_SymbolicToStScanCode_UK(const SDL_Keysym* keysym)
 	 case SDLK_CARET: code = 0x06; break;
 	 case SDLK_UNDERSCORE: code = 0x0C; break;
 	 case SDLK_BACKQUOTE: code = 0x29; break;
-	 default: code = Keymap_SymbolicToStScanCode_US(keysym);
+	 default: code = Keymap_SymbolicToStScanCode_default(keysym);
 	}
 	return code;
 }
@@ -357,7 +366,7 @@ static uint8_t Keymap_SymbolicToStScanCode_ES(const SDL_Keysym* keysym)
 	 /* case 186: code = 0x2B; break;  º as ST \ */
 	 /* case 231: code = 0x29; break;  Ç */
 	 /* case 241: code = 0x27; break;  Ñ */
-	 default: code = Keymap_SymbolicToStScanCode_US(keysym);
+	 default: code = Keymap_SymbolicToStScanCode_default(keysym);
 	}
 	return code;
 }
@@ -389,7 +398,7 @@ static uint8_t Keymap_SymbolicToStScanCode_IT(const SDL_Keysym* keysym)
 	 /* case 236: code = 0x0D; break;  ì */
 	 /* case 242: code = 0x27; break;  ò */
 	 case 249: code = 0x29; break; /* ù */
-	 default: code = Keymap_SymbolicToStScanCode_US(keysym);
+	 default: code = Keymap_SymbolicToStScanCode_default(keysym);
 	}
 	return code;
 }
@@ -424,7 +433,7 @@ static uint8_t Keymap_SymbolicToStScanCode_SE(const SDL_Keysym* keysym)
 	 /* case 229: code = 0x1A; break;  å */
 	 /* case 246: code = 0x27; break;  ö */
 	 case 252: code = 0x1B; break; /* Ü DE/CHDE */
-	 default: code = Keymap_SymbolicToStScanCode_US(keysym);
+	 default: code = Keymap_SymbolicToStScanCode_default(keysym);
 	}
 	return code;
 }
@@ -466,7 +475,7 @@ static uint8_t Keymap_SymbolicToStScanCode_CH(const SDL_Keysym* keysym)
 	 /* case 233: code = 0x27; break;  CHFR é */
 	 /* case 246: code = 0x27; break;  CHDE ö */
 	 /* case 252: code = 0x1A; break;  CHDE ü */
-	 default: code = Keymap_SymbolicToStScanCode_US(keysym);
+	 default: code = Keymap_SymbolicToStScanCode_default(keysym);
 	}
 	return code;
 }
@@ -495,7 +504,7 @@ static uint8_t Keymap_SymbolicToStScanCode_NO(const SDL_Keysym* keysym)
 	 case 233: return 0x0D;		/* é */
 	 case 248: return 0x27;		/* ø */
 	 case 252: return 0x1b;		/* ü */
-	 default: return Keymap_SymbolicToStScanCode_US(keysym);
+	 default: return Keymap_SymbolicToStScanCode_default(keysym);
 	}
 }
 
@@ -519,7 +528,7 @@ static uint8_t Keymap_SymbolicToStScanCode_DK(const SDL_Keysym* keysym)
 	 case 230: return 0x27;		/* æ */
 	 case 233: return 0x29;		/* é */
 	 case 248: return 0x28;		/* ø */
-	 default: return Keymap_SymbolicToStScanCode_US(keysym);
+	 default: return Keymap_SymbolicToStScanCode_default(keysym);
 	}
 }
 
@@ -538,7 +547,7 @@ static uint8_t Keymap_SymbolicToStScanCode_NL(const SDL_Keysym* keysym)
 	 /* TODO not yet reviewed. The cases above ensure no changes from Thomas Huth's default map and should be re-evaluated on review. -- Brad Smith */
 	 case SDLK_HASH: return 0x2B;
 	 case SDLK_BACKSLASH: return 0x60;
-	 default: return Keymap_SymbolicToStScanCode_US(keysym);
+	 default: return Keymap_SymbolicToStScanCode_default(keysym);
 	}
 }
 
