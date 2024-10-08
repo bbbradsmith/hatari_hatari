@@ -54,9 +54,23 @@ typedef struct
 	SDL_Scancode scancode;
 } SDLKey;
 
+static const struct
+{
+	const char *name;
+	uint8_t scancode;
+	uint8_t mod;
+} ST_Modifiers[] = {
+	{"CONTROL", ST_CONTROL,   0x01},
+	{"LSHIFT",  ST_LSHIFT,    0x02},
+	{"RSHIFT",  ST_RSHIFT,    0x04},
+	{"ALT",     ST_ALTERNATE, 0x08},
+};
+
 typedef struct
 {
 	uint8_t scancode;
+	/* key modifiers matching ST_Modifiers[].mod bit values */
+	uint8_t mods;
 } ST_Key;
 
 /* Key mappings: pair SDL key definition with ST key */
@@ -611,6 +625,7 @@ static ST_Key* Keymap_RemapKeyToSTKey(const SDL_Keysym* pKeySym)
 
 	/* check for UpdateMapping() */
 	assert(scancode < ARRAY_SIZE(KeysDown));
+	memset(KeysDown+scancode, 0, sizeof(*KeysDown));
 
 	/* Check for keypad first so we can handle numlock */
 	if (ConfigureParams.Keyboard.nKeymapType != KEYMAP_LOADED &&
@@ -641,6 +656,7 @@ static ST_Key* Keymap_RemapKeyToSTKey(const SDL_Keysym* pKeySym)
 			if (mapping->pc.scancode != scancode)
 				continue;
 
+			KeysDown[scancode].mods = mapping->st.mods;
 			return UpdateMapping("keymap", scancode,
 					     mapping->st.scancode);
 		}
@@ -688,24 +704,83 @@ static bool HostSpecToKeymap(const char *spec, KeyMapping* mapping)
 
 /*-----------------------------------------------------------------------*/
 /**
+ * Parse modifier name from 'name' and return 'mods' value with
+ * corresponding bit added to it, or return zero if there was no match
+ */
+static uint8_t AddSTModifier(uint8_t mods, const char *name)
+{
+	uint8_t mod, i;
+	for (i = 0; i < ARRAY_SIZE(ST_Modifiers); i++)
+	{
+		if (strcmp(ST_Modifiers[i].name, name) != 0)
+			continue;
+
+		mod = ST_Modifiers[i].mod;
+		if (mod & mods)
+		{
+			Log_Printf(LOG_WARN, "ST modifier '%s' specified twice\n", name);
+			return 0;
+		}
+		return (mods | mod);
+	}
+	Log_Printf(LOG_ERROR, "unknown/unsupported ST modifier '%s'\n", name);
+	return 0;
+}
+
+
+/*-----------------------------------------------------------------------*/
+/**
  * Fill "mapping" KeyMapping guest (ST) part based on guest "spec" string.
  * Return true on success
  */
 static bool GuestSpecToKeymap(const char *spec, KeyMapping* mapping)
 {
-	int key;
+	char buf[64], *token, *saveptr, *endptr;
+	uint8_t scancode, mods;
+
 	if (!spec)
 		return false;
-
-	key = atoi(spec);
-	if (key <= 0 || key > KBD_MAX_SCANCODE)
+	if (strlcpy(buf, spec, sizeof(buf)) >= sizeof(buf))
 	{
-		Log_Printf(LOG_WARN, "Invalid ST scancode: '%s' (0 > %d < %d)\n",
-			   spec, key, KBD_MAX_SCANCODE);
+		Log_Printf(LOG_ERROR, "ST scancode spec '%s' too long\n", spec);
 		return false;
 	}
-	mapping->st.scancode = key;
-	return true;
+
+	scancode = mods = 0;
+	for (token = strtok_r(buf, "|", &saveptr);
+	     token;
+	     token = strtok_r(NULL, "|", &saveptr))
+	{
+		token = Str_Trim(token);
+		if (isalpha(token[0]))
+		{
+			mods = AddSTModifier(mods, token);
+			if (!mods)
+				return false;
+			continue;
+		}
+		if (scancode)
+		{
+			Log_Printf(LOG_WARN, "extra '%s', ST scancode already set\n", token);
+			return false;
+		}
+		scancode = strtol(token, &endptr, 10);
+		if (!scancode)
+		{
+			Log_Printf(LOG_ERROR, "invalid ST scancode '%s'\n", token);
+			return false;
+		}
+		if (*endptr)
+		{
+			Log_Printf(LOG_WARN, "'%s' garbage at end of '%s' ST scancode\n",
+				   endptr, token);
+			return false;
+		}
+	}
+	mapping->st.scancode = scancode;
+	mapping->st.mods = mods;
+
+	return (scancode > 0);
 }
 
 
@@ -884,6 +959,44 @@ static bool IsKeyTranslatable(SDL_Keycode symkey)
 
 /*-----------------------------------------------------------------------*/
 /**
+ * Set modifiers keys indicated by bits in 'mods' up or down
+ * based on 'down'.
+ */
+static void InsertModifiers(uint8_t mods, bool down)
+{
+	uint8_t i, scancode;
+	if (!mods)
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(ST_Modifiers); i++)
+	{
+		if (!(mods & ST_Modifiers[i].mod))
+			continue;
+
+		scancode = ST_Modifiers[i].scancode;
+
+		if (down)
+		{
+			/* because modifiers may already be down
+			 * due to normal key events (or mapped
+			 * scancodes that happen to be modifiers),
+			 * KeyStates are counted
+			 */
+			if (Keyboard.KeyStates[scancode]++ > 0)
+				continue;
+		}
+		else
+		{
+			if (--Keyboard.KeyStates[scancode] > 0)
+				continue;
+		}
+		IKBD_PressSTKey(scancode, down);
+	}
+}
+
+
+/*-----------------------------------------------------------------------*/
+/**
  * User pressed a key down
  */
 void Keymap_KeyDown(const SDL_Keysym *sdlkey)
@@ -914,10 +1027,13 @@ void Keymap_KeyDown(const SDL_Keysym *sdlkey)
 
 	STScanCode = stkey->scancode;
 	LOG_TRACE(TRACE_KEYMAP, "key map: sym=0x%x to ST-scan=0x%02x\n", symkey, STScanCode);
+
+	assert(Keyboard.KeyStates[scancode] == 0);
+	InsertModifiers(stkey->mods, true);
 	if (!Keyboard.KeyStates[STScanCode])
 	{
 		/* Set down */
-		Keyboard.KeyStates[STScanCode] = true;
+		Keyboard.KeyStates[STScanCode]++;
 		IKBD_PressSTKey(STScanCode, true);
 	}
 }
@@ -959,11 +1075,13 @@ void Keymap_KeyUp(const SDL_Keysym *sdlkey)
 
 	/* Release key (only if was pressed) */
 	STScanCode = stkey->scancode;
+	assert(Keyboard.KeyStates[STScanCode] > 0);
 	if (Keyboard.KeyStates[STScanCode])
 	{
 		IKBD_PressSTKey(STScanCode, false);
-		Keyboard.KeyStates[STScanCode] = false;
+		Keyboard.KeyStates[STScanCode]--;
 	}
+	InsertModifiers(stkey->mods, false);
 }
 
 /*-----------------------------------------------------------------------*/
