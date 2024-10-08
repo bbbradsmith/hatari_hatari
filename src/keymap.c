@@ -750,8 +750,8 @@ static bool HostSpecToKeymap(const char *spec, KeyMapping* mapping)
 	     token = strtok_r(NULL, "|", &saveptr))
 	{
 		token = Str_Trim(token);
-		/* text description? */
-		if (isalpha(token[0]))
+		/* not a number? */
+		if (!isdigit(token[0]))
 		{
 			SDL_Scancode code;
 			SDL_Keymod mod;
@@ -768,8 +768,8 @@ static bool HostSpecToKeymap(const char *spec, KeyMapping* mapping)
 				mods = mod;
 				continue;
 			}
-			/* is it non-modifier key? */
-			code = SDL_GetScancodeFromName(token);
+			/* is it non-modifier, symbolic key name? */
+			code = SDL_GetScancodeFromKey(SDL_GetKeyFromName(token));
 			if (code)
 			{
 				if (scancode)
@@ -858,7 +858,8 @@ static bool GuestSpecToKeymap(const char *spec, KeyMapping* mapping)
 	     token = strtok_r(NULL, "|", &saveptr))
 	{
 		token = Str_Trim(token);
-		if (isalpha(token[0]))
+		/* not a number? */
+		if (!isdigit(token[0]))
 		{
 			mods = AddSTModifier(mods, token);
 			if (!mods)
