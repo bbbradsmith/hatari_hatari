@@ -72,6 +72,7 @@ static const struct
 
 typedef struct
 {
+	/* real scancode, or ALT_XXX code */
 	uint8_t scancode;
 	/* key modifiers matching ST_Modifiers[].mod bit values */
 	uint8_t mods;
@@ -1194,7 +1195,6 @@ void Keymap_KeyDown(const SDL_Keysym *sdlkey)
 	STScanCode = stkey->scancode;
 	LOG_TRACE(TRACE_KEYMAP, "key map: sym=0x%x to ST-scan=0x%02x\n", symkey, STScanCode);
 
-	assert(Keyboard.KeyStates[scancode] == 0);
 	if (InsertModifiers(stkey->mods, true))
 	{
 		bool done = InsertAltXXXDigits(stkey);
@@ -1202,6 +1202,8 @@ void Keymap_KeyDown(const SDL_Keysym *sdlkey)
 		if (done)
 			return;
 	}
+	assert(STScanCode < ARRAY_SIZE(Keyboard.KeyStates));
+	assert(Keyboard.KeyStates[STScanCode] == 0);
 	if (!Keyboard.KeyStates[STScanCode])
 	{
 		/* Set down */
@@ -1246,12 +1248,16 @@ void Keymap_KeyUp(const SDL_Keysym *sdlkey)
 	}
 
 	/* Release key (only if was pressed) */
-	STScanCode = stkey->scancode;
-	assert(Keyboard.KeyStates[STScanCode] > 0);
-	if (Keyboard.KeyStates[STScanCode])
+	if (!(stkey->mods & ALT_XXX_BIT))
 	{
-		IKBD_PressSTKey(STScanCode, false);
-		Keyboard.KeyStates[STScanCode]--;
+		STScanCode = stkey->scancode;
+		assert(STScanCode < ARRAY_SIZE(Keyboard.KeyStates));
+		assert(Keyboard.KeyStates[STScanCode] > 0);
+		if (Keyboard.KeyStates[STScanCode])
+		{
+			IKBD_PressSTKey(STScanCode, false);
+			Keyboard.KeyStates[STScanCode]--;
+		}
 	}
 	if (InsertModifiers(stkey->mods, false))
 	{
