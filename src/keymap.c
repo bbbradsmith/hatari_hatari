@@ -12,6 +12,7 @@
 */
 const char Keymap_fileid[] = "Hatari keymap.c";
 
+#include <assert.h>
 #include <ctype.h>
 #include "main.h"
 #include "keymap.h"
@@ -29,9 +30,6 @@ const char Keymap_fileid[] = "Hatari keymap.c";
 /* if not able to map */
 #define ST_NO_SCANCODE 0xff
 
-/* Table for loaded keys: */
-static int LoadedKeymap[KBD_MAX_SCANCODE][2];
-
 /* List of ST scan codes to NOT de-bounce when running in maximum speed */
 static const uint8_t DebounceExtendedKeys[] =
 {
@@ -43,6 +41,30 @@ static const uint8_t DebounceExtendedKeys[] =
 	0      /* term */
 };
 
+typedef struct
+{
+	SDL_Scancode scancode;
+} SDLKey;
+
+typedef struct
+{
+	uint8_t scancode;
+} ST_Key;
+
+/* Key mappings: pair SDL key definition with ST key */
+typedef struct
+{
+	/* Input on PC keyboard */
+	SDLKey pc;
+	/* Output on the ST keyboard */
+	ST_Key st;
+} KeyMapping;
+
+/* Loaded PC->ST key mappings */
+static KeyMapping LoadedKeymap[KBD_MAX_SCANCODE];
+
+/* ST keys being kept down, indexed by SDL scancode */
+static ST_Key KeysDown[SDL_NUM_SCANCODES];
 
 
 /*-----------------------------------------------------------------------*/
@@ -543,49 +565,82 @@ static uint8_t Keymap_GetKeyPadScanCode(const SDL_Keysym* pKeySym)
 	return ST_NO_SCANCODE;
 }
 
+/**
+ * If given ST scancode is not set, return NULL, otherwise add scancode
+ * to pressed keys array, output trace of the SDL->ST key mapping and
+ * return pointer to the mapping
+ */
+static ST_Key* UpdateMapping(const char *maptype, SDL_Scancode pcscan, uint8_t stscan)
+{
+	ST_Key *key = &(KeysDown[pcscan]);
+
+	if (stscan == ST_NO_SCANCODE)
+		return NULL;
+	key->scancode = stscan;
+
+	LOG_TRACE(TRACE_KEYMAP, "key mapping: %02x (%s)\n", stscan, maptype);
+	return key;
+}
 
 /**
- * Remap SDL Key to ST Scan code
+ * Remap SDL Key to ST Key (when key is pressed).
+ * Receives the pressed key from SDL, and returns matching ST_Key,
+ * or NULL if no mapping could be found
  */
-static uint8_t Keymap_RemapKeyToSTScanCode(const SDL_Keysym* pKeySym)
+static ST_Key* Keymap_RemapKeyToSTKey(const SDL_Keysym* pKeySym)
 {
+	const SDL_Keycode sym = pKeySym->sym;
+	const SDL_Scancode scancode = pKeySym->scancode;
+
+	/* check for UpdateMapping() */
+	assert(scancode < ARRAY_SIZE(KeysDown));
+
 	/* Check for keypad first so we can handle numlock */
-	if (ConfigureParams.Keyboard.nKeymapType != KEYMAP_LOADED)
+	if (ConfigureParams.Keyboard.nKeymapType != KEYMAP_LOADED &&
+	    sym >= SDLK_KP_1 && sym <= SDLK_KP_9)
 	{
-		if (pKeySym->sym >= SDLK_KP_1 && pKeySym->sym <= SDLK_KP_9)
-		{
-			return Keymap_GetKeyPadScanCode(pKeySym);
-		}
+		return UpdateMapping("keypad/symbolic", scancode,
+				     Keymap_GetKeyPadScanCode(pKeySym));
 	}
 
 	/* Remap from PC scancodes? */
 	if (ConfigureParams.Keyboard.nKeymapType == KEYMAP_SCANCODE)
 	{
-		return Keymap_PcToStScanCode(pKeySym);
+		return UpdateMapping("scancode/symbolic", scancode,
+				     Keymap_PcToStScanCode(pKeySym));
 	}
 
 	/* Use loaded keymap? */
 	if (ConfigureParams.Keyboard.nKeymapType == KEYMAP_LOADED)
 	{
 		int i;
-		for (i = 0; i < KBD_MAX_SCANCODE && LoadedKeymap[i][1] != 0; i++)
+		for (i = 0; i < ARRAY_SIZE(LoadedKeymap); i++)
 		{
-			if (pKeySym->sym == (SDL_Keycode)LoadedKeymap[i][0])
-				return LoadedKeymap[i][1];
+			KeyMapping *mapping = &LoadedKeymap[i];
+
+			if (mapping->pc.scancode == 0)
+				break; /* End of table */
+
+			if (mapping->pc.scancode != scancode)
+				continue;
+
+			return UpdateMapping("keymap", scancode,
+					     mapping->st.scancode);
 		}
 	}
 
-	/* Use symbolic mapping */
-	return Keymap_SymbolicToStScanCode(pKeySym);
+	/* Fall back to symbolic mapping */
+	return UpdateMapping("symbolic", scancode,
+			     Keymap_SymbolicToStScanCode(pKeySym));
 }
 
 
 /*-----------------------------------------------------------------------*/
 /**
- * Fill host (PC) key based on host "spec" string.
+ * Fill "mapping" KeyMapping host part based on host "spec" string.
  * Return true on success
  */
-static bool HostSpecToKeymap(const char *spec, int *scancode)
+static bool HostSpecToKeymap(const char *spec, KeyMapping* mapping)
 {
 	int key;
 	if (!spec)
@@ -609,17 +664,17 @@ static bool HostSpecToKeymap(const char *spec, int *scancode)
 			   spec, key);
 		return false;
 	}
-	*scancode = key;
+	mapping->pc.scancode = key;
 	return true;
 }
 
 
 /*-----------------------------------------------------------------------*/
 /**
- * Fill guest (ST) key based on guest "spec" string.
+ * Fill "mapping" KeyMapping guest (ST) part based on guest "spec" string.
  * Return true on success
  */
-static bool GuestSpecToKeymap(const char *spec, int *scancode)
+static bool GuestSpecToKeymap(const char *spec, KeyMapping* mapping)
 {
 	int key;
 	if (!spec)
@@ -632,7 +687,7 @@ static bool GuestSpecToKeymap(const char *spec, int *scancode)
 			   spec, key, KBD_MAX_SCANCODE);
 		return false;
 	}
-	*scancode = key;
+	mapping->st.scancode = key;
 	return true;
 }
 
@@ -697,7 +752,7 @@ void Keymap_LoadRemapFile(const char *pszFileName)
 
 		/* get the host (PC) key spec */
 		host = Str_Trim(strtok_r(line, ",", &saveptr));
-		if (!HostSpecToKeymap(host, &LoadedKeymap[idx][0]))
+		if (!HostSpecToKeymap(host, &LoadedKeymap[idx]))
 		{
 			Log_Printf(LOG_WARN, "Failed to parse host (PC/SDL) part '%s' of line %d in: %s\n",
 				   host, linenro, pszFileName);
@@ -707,7 +762,7 @@ void Keymap_LoadRemapFile(const char *pszFileName)
 
 		/* Get the guest (ST) key spec */
 		guest = Str_Trim(strtok_r(NULL, "\n", &saveptr));
-		if (!GuestSpecToKeymap(guest, &LoadedKeymap[idx][1]))
+		if (!GuestSpecToKeymap(guest, &LoadedKeymap[idx]))
 		{
 			Log_Printf(LOG_WARN, "Failed to parse guest (ST) part '%s' of line %d in: %s\n",
 				   guest, linenro, pszFileName);
@@ -817,6 +872,7 @@ static bool IsKeyTranslatable(SDL_Keycode symkey)
 void Keymap_KeyDown(const SDL_Keysym *sdlkey)
 {
 	uint8_t STScanCode;
+	ST_Key* stkey;
 	int symkey = sdlkey->sym;
 	int modkey = sdlkey->mod;
 
@@ -835,16 +891,17 @@ void Keymap_KeyDown(const SDL_Keysym *sdlkey)
 	if (!IsKeyTranslatable(symkey))
 		return;
 
-	STScanCode = Keymap_RemapKeyToSTScanCode(sdlkey);
+	stkey = Keymap_RemapKeyToSTKey(sdlkey);
+	if (stkey == NULL)
+		return;
+
+	STScanCode = stkey->scancode;
 	LOG_TRACE(TRACE_KEYMAP, "key map: sym=0x%x to ST-scan=0x%02x\n", symkey, STScanCode);
-	if (STScanCode != ST_NO_SCANCODE)
+	if (!Keyboard.KeyStates[STScanCode])
 	{
-		if (!Keyboard.KeyStates[STScanCode])
-		{
-			/* Set down */
-			Keyboard.KeyStates[STScanCode] = true;
-			IKBD_PressSTKey(STScanCode, true);
-		}
+		/* Set down */
+		Keyboard.KeyStates[STScanCode] = true;
+		IKBD_PressSTKey(STScanCode, true);
 	}
 }
 
@@ -856,6 +913,7 @@ void Keymap_KeyDown(const SDL_Keysym *sdlkey)
 void Keymap_KeyUp(const SDL_Keysym *sdlkey)
 {
 	uint8_t STScanCode;
+	ST_Key* stkey;
 	int symkey = sdlkey->sym;
 	int modkey = sdlkey->mod;
 
@@ -875,15 +933,19 @@ void Keymap_KeyUp(const SDL_Keysym *sdlkey)
 	if (!IsKeyTranslatable(symkey))
 		return;
 
-	STScanCode = Keymap_RemapKeyToSTScanCode(sdlkey);
-	/* Release key (only if was pressed) */
-	if (STScanCode != ST_NO_SCANCODE)
+	stkey = &KeysDown[sdlkey->scancode];
+	if (stkey == NULL)
 	{
-		if (Keyboard.KeyStates[STScanCode])
-		{
-			IKBD_PressSTKey(STScanCode, false);
-			Keyboard.KeyStates[STScanCode] = false;
-		}
+		Log_Printf(LOG_ERROR, "No mapping for key %d found!\n", sdlkey->scancode);
+		return;
+	}
+
+	/* Release key (only if was pressed) */
+	STScanCode = stkey->scancode;
+	if (Keyboard.KeyStates[STScanCode])
+	{
+		IKBD_PressSTKey(STScanCode, false);
+		Keyboard.KeyStates[STScanCode] = false;
 	}
 }
 
