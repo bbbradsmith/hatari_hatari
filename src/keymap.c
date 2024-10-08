@@ -52,6 +52,7 @@ static const uint8_t DebounceExtendedKeys[] =
 typedef struct
 {
 	SDL_Scancode scancode;
+	SDL_Keymod mods;
 } SDLKey;
 
 static const struct
@@ -649,14 +650,27 @@ static ST_Key* Keymap_RemapKeyToSTKey(const SDL_Keysym* pKeySym)
 	if (ConfigureParams.Keyboard.nKeymapType == KEYMAP_LOADED)
 	{
 		int i;
+		SDL_Keymod mods = pKeySym->mod;
 		for (i = 0; i < ARRAY_SIZE(LoadedKeymap); i++)
 		{
 			KeyMapping *mapping = &LoadedKeymap[i];
+			SDL_Keymod pcmod;
 
 			if (mapping->pc.scancode == 0)
 				break; /* End of table */
 
 			if (mapping->pc.scancode != scancode)
+				continue;
+
+			pcmod = mapping->pc.mods;
+			/* (at least) one shift used? */
+			if (pcmod == KMOD_SHIFT)
+			{
+				if (!(mods & pcmod))
+					continue;
+			}
+			/* (at least) specified mod used? */
+			else if ((mods & pcmod) != pcmod)
 				continue;
 
 			KeysDown[scancode].mods = mapping->st.mods;
@@ -673,35 +687,124 @@ static ST_Key* Keymap_RemapKeyToSTKey(const SDL_Keysym* pKeySym)
 
 /*-----------------------------------------------------------------------*/
 /**
+ * Parse SDL modifier name from 'name' and return its value, or
+ * zero for error.
+ */
+static SDL_Keymod GetSdlModifier(const char *name) {
+	struct {
+		SDL_Keymod mod;
+		const char *name;
+	} const keymodNames[] = {
+		{ KMOD_LSHIFT, "LSHIFT" },
+		{ KMOD_RSHIFT, "RSHIFT" },
+		{ KMOD_SHIFT,  "SHIFT" }, /* special case: either of above */
+
+		{ KMOD_LCTRL, "LCTRL" },
+		{ KMOD_RCTRL, "RCTRL" },
+		{ KMOD_CTRL,  "CTRL" },   /* both of above */
+
+		{ KMOD_LALT, "LALT" },
+		{ KMOD_RALT, "RALT" },
+		{ KMOD_ALT,  "ALT" },     /* both of above */
+
+		{ KMOD_LGUI, "LGUI" },
+		{ KMOD_RGUI, "RGUI" },
+		{ KMOD_GUI,  "GUI" },     /* both of above */
+
+		{ KMOD_CAPS, "CAPS" },
+		{ KMOD_MODE, "MODE" },
+		{ KMOD_NUM,  "NUM" },
+	};
+	int i;
+	for (i = 0; i < ARRAY_SIZE(keymodNames); i++)
+	{
+		if (strcmp(name, keymodNames[i].name) == 0)
+			return keymodNames[i].mod;
+	};
+	return 0;
+}
+
+
+/*-----------------------------------------------------------------------*/
+/**
  * Fill "mapping" KeyMapping host part based on host "spec" string.
  * Return true on success
  */
 static bool HostSpecToKeymap(const char *spec, KeyMapping* mapping)
 {
-	int key;
+	char buf[64], *token, *saveptr, *endptr;
+	SDL_Scancode scancode = 0;
+	SDL_Keymod mods = 0;
+
 	if (!spec)
 		return false;
-
-	key = atoi(spec);    /* Direct key code? */
-	if (key < 10)
+	if (strlcpy(buf, spec, sizeof(buf)) >= sizeof(buf))
 	{
-		/* If it's not a valid number >= 10, then
-		 * assume we've got a symbolic key name
-		 */
-		int offset = 0;
-		/* quoted character (e.g. comment line char)? */
-		if (*spec == '\\' && strlen(spec) == 2)
-			offset = 1;
-		key = Keymap_GetKeyFromName(spec+offset);
-	}
-	if (key < 8)
-	{
-		Log_Printf(LOG_WARN, "Invalid PC key: '%s' (%d >= 8)\n",
-			   spec, key);
+		Log_Printf(LOG_ERROR, "PC/SDL scancode spec '%s' too long\n", spec);
 		return false;
 	}
-	mapping->pc.scancode = key;
-	return true;
+
+	scancode = mods = 0;
+	for (token = strtok_r(buf, "|", &saveptr);
+	     token;
+	     token = strtok_r(NULL, "|", &saveptr))
+	{
+		token = Str_Trim(token);
+		/* text description? */
+		if (isalpha(token[0]))
+		{
+			SDL_Scancode code;
+			SDL_Keymod mod;
+
+			/* is it modifier? */
+			mod = GetSdlModifier(token);
+			if (mod)
+			{
+				if (mods)
+				{
+					Log_Printf(LOG_ERROR, "extra '%s', PC/SDL modifier already set\n", token);
+					return false;
+				}
+				mods = mod;
+				continue;
+			}
+			/* is it non-modifier key? */
+			code = SDL_GetScancodeFromName(token);
+			if (code)
+			{
+				if (scancode)
+				{
+					Log_Printf(LOG_ERROR, "extra '%s', PC/SDL scancode already set\n", token);
+					return false;
+				}
+				scancode = code;
+				continue;
+			}
+			Log_Printf(LOG_ERROR, "unknown PC/SDL key/modifier name '%s'\n", token);
+			return false;
+		}
+		/* no => numerical scancode */
+		if (scancode)
+		{
+			Log_Printf(LOG_WARN, "extra '%s', PC/SDL scancode already set\n", token);
+			return false;
+		}
+		scancode = strtol(token, &endptr, 10);
+		if (!scancode)
+		{
+			Log_Printf(LOG_ERROR, "invalid PC/SDL scancode '%s'\n", token);
+			return false;
+		}
+		if (*endptr)
+		{
+			Log_Printf(LOG_WARN, "'%s' garbage at end of '%s' PC/SDL scancode\n",
+				   endptr, token);
+			return false;
+		}
+	}
+	mapping->pc.scancode = scancode;
+	mapping->pc.mods = mods;
+	return (scancode > 0);
 }
 
 
