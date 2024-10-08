@@ -22,6 +22,7 @@ const char Reset_fileid[] = "Hatari reset.c";
 #include "ioMem.h"
 #include "cycles.h"
 #include "cycInt.h"
+#include "keymap.h"
 #include "m68000.h"
 #include "mfp.h"
 #include "midi.h"
@@ -107,6 +108,7 @@ static int Reset_ST(bool bCold)
 	Sound_Reset();                /* Reset Sound */
 	ACIA_Reset( ACIA_Array );     /* ACIA */
 	IKBD_Reset(bCold);            /* Keyboard (after ACIA) */
+	Keymap_Reset();               /* Key mapping state */
 	SCC_Reset();
 	if (Config_IsMachineFalcon() && !bUseVDIRes)
 		VIDEL_reset();

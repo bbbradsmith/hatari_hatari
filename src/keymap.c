@@ -77,6 +77,15 @@ void Keymap_Init(void)
 }
 
 /**
+ * Clear key states on reset, like IKBD does
+ */
+void Keymap_Reset(void)
+{
+	memset(KeysDown, 0, sizeof(KeysDown));
+}
+
+
+/**
  * Default function for mapping SDL symbolic key to ST scan code.
  * This is basically the US QWERTY ST keyboard with some additional
  * international key fallbacks.
