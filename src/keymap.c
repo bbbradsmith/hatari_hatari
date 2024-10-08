@@ -64,7 +64,10 @@ static const struct
 	{"LSHIFT",  ST_LSHIFT,    0x02},
 	{"RSHIFT",  ST_RSHIFT,    0x04},
 	{"ALT",     ST_ALTERNATE, 0x08},
+	{"ALT_XXX", ST_ALTERNATE, 0x10},
 };
+
+#define ALT_XXX_BIT 0x10
 
 typedef struct
 {
@@ -777,6 +780,11 @@ static bool GuestSpecToKeymap(const char *spec, KeyMapping* mapping)
 			return false;
 		}
 	}
+	if ((mods & ALT_XXX_BIT) && (mods & ~ALT_XXX_BIT))
+	{
+		Log_Printf(LOG_ERROR, "'ALT_XXX' ST modifier specified with other modifier(s)\n");
+		return false;
+	}
 	mapping->st.scancode = scancode;
 	mapping->st.mods = mods;
 
@@ -997,6 +1005,47 @@ static void InsertModifiers(uint8_t mods, bool down)
 
 /*-----------------------------------------------------------------------*/
 /**
+ * Insert key presses and releases for ALT_XXX digits
+ * when relevant modifier bit is set.
+ *
+ * Return true if scancode should be ignored, false otherwise.
+ */
+static bool InsertAltXXXDigits(ST_Key *stkey)
+{
+	/* map 0, 1-3, 5-6, 7-9 to corresponding numpad scancodes */
+	static const uint8_t keypad[] = {
+		112,
+		109, 110, 111,
+		106, 107, 108,
+		103, 104, 105
+	};
+	char buf[8], *xxx;
+
+	if (!(stkey->mods & ALT_XXX_BIT))
+		return false;
+
+	sprintf(buf, "%d", stkey->scancode);
+	for (xxx = buf; *xxx; xxx++)
+	{
+		uint8_t scancode;
+		int digit;
+
+		digit = *xxx - '0';
+		assert(digit >= 0 && digit <= 9);
+		scancode = keypad[digit];
+		/* press and release each keycode
+		 * without checking whether they
+		 * are already pressed
+		 */
+		IKBD_PressSTKey(scancode, true);
+		IKBD_PressSTKey(scancode, false);
+	}
+	return true;
+}
+
+
+/*-----------------------------------------------------------------------*/
+/**
  * User pressed a key down
  */
 void Keymap_KeyDown(const SDL_Keysym *sdlkey)
@@ -1030,6 +1079,9 @@ void Keymap_KeyDown(const SDL_Keysym *sdlkey)
 
 	assert(Keyboard.KeyStates[scancode] == 0);
 	InsertModifiers(stkey->mods, true);
+	if (InsertAltXXXDigits(stkey))
+		return;
+
 	if (!Keyboard.KeyStates[STScanCode])
 	{
 		/* Set down */
