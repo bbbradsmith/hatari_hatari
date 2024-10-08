@@ -753,7 +753,7 @@ static bool HostSpecToKeymap(const char *spec, KeyMapping* mapping)
 
 	if (!spec)
 		return false;
-	if (strlcpy(buf, spec, sizeof(buf)) >= sizeof(buf))
+	if (Str_Copy(buf, spec, sizeof(buf)) >= (long) sizeof(buf))
 	{
 		Log_Printf(LOG_ERROR, "PC/SDL scancode spec '%s' too long\n", spec);
 		return false;
@@ -874,7 +874,7 @@ static bool GuestSpecToKeymap(const char *spec, KeyMapping* mapping)
 
 	if (!spec)
 		return false;
-	if (strlcpy(buf, spec, sizeof(buf)) >= sizeof(buf))
+	if (Str_Copy(buf, spec, sizeof(buf)) >= (long) sizeof(buf))
 	{
 		Log_Printf(LOG_ERROR, "ST scancode spec '%s' too long\n", spec);
 		return false;
