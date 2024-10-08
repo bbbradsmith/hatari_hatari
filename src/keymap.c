@@ -61,14 +61,27 @@ static const struct
 	uint8_t scancode;
 	uint8_t mod;
 } ST_Modifiers[] = {
-	{"CONTROL", ST_CONTROL,   0x01},
-	{"LSHIFT",  ST_LSHIFT,    0x02},
-	{"RSHIFT",  ST_RSHIFT,    0x04},
-	{"ALT",     ST_ALTERNATE, 0x08},
-	{"ALT_XXX", ST_ALTERNATE, 0x10},
+	{"CONTROL",		ST_CONTROL,		0x01},
+	{"LSHIFT",		ST_LSHIFT,		0x02},
+	{"RSHIFT",		ST_RSHIFT,		0x04},
+	{"ALT",			ST_ALTERNATE,	0x08},
+	{"ALT_XXX",		ST_ALTERNATE,	0x10},
+	{"NO_CONTROL",	ST_CONTROL,		0x20},
+	{"NO_LSHIFT",	ST_LSHIFT,		0x40},
+	{"NO_RSHIFT",	ST_RSHIFT,		0x40},
+	{"NO_ALT",		ST_ALTERNATE,	0x80},
 };
 
-#define ALT_XXX_BIT 0x10
+#define CONTROL_BIT	0x01
+#define LSHIFT_BIT		0x02
+#define RSHIFT_BIT		0x04
+#define ALT_BIT		0x08
+#define ALT_XXX_BIT	0x10
+#define NO_CONTROL_BIT	0x20
+#define NO_SHIFT_BIT	0x40
+#define NO_ALT_BIT		0x80
+
+#define NO_XXX_BITS	0xE0
 
 typedef struct
 {
@@ -819,10 +832,28 @@ static uint8_t AddSTModifier(uint8_t mods, const char *name)
 			continue;
 
 		mod = ST_Modifiers[i].mod;
-		if (mod & mods)
+		if (mods)
 		{
-			Log_Printf(LOG_WARN, "ST modifier '%s' specified twice\n", name);
-			return 0;
+			if (((mods & LSHIFT_BIT) && (mod & NO_SHIFT_BIT)) || ((mod & LSHIFT_BIT) && (mods & NO_SHIFT_BIT)))
+			{
+				Log_Printf(LOG_WARN, "ST modifiers LSHIFT and (NO_LSHIFT or NO_RSHIFT) cannot be set together\n");
+				return 0;
+			}
+			if (((mods & RSHIFT_BIT) && (mod & NO_SHIFT_BIT)) || ((mod & RSHIFT_BIT) && (mods & NO_SHIFT_BIT)))
+			{
+				Log_Printf(LOG_WARN, "ST modifiers RSHIFT and (NO_LSHIFT or NO_RSHIFT) cannot be set together\n");
+				return 0;
+			}
+			if (((mods & CONTROL_BIT) && (mod & NO_CONTROL_BIT)) || ((mod & CONTROL_BIT) && (mods & NO_CONTROL_BIT)))
+			{
+				Log_Printf(LOG_WARN, "ST modifiers CONTROL and NO_CONTROL cannot be set together\n");
+				return 0;
+			}
+			if (((mods & ALT_BIT) && (mod & NO_ALT_BIT)) || ((mod & ALT_BIT) && (mods & NO_ALT_BIT)))
+			{
+				Log_Printf(LOG_WARN, "ST modifiers ALT and NO_ALT cannot be set together\n");
+				return 0;
+			}
 		}
 		return (mods | mod);
 	}
@@ -1077,7 +1108,8 @@ static bool IsKeyTranslatable(SDL_Keycode symkey)
 static bool InsertModifiers(uint8_t mods, bool down)
 {
 	const char *separator;
-	uint8_t i, scancode;
+	uint8_t i, scancode, mod;
+	bool flag;
 	if (!mods)
 		return false;
 
@@ -1088,11 +1120,16 @@ static bool InsertModifiers(uint8_t mods, bool down)
 			continue;
 
 		scancode = ST_Modifiers[i].scancode;
+		mod = ST_Modifiers[i].mod;
 		LOG_TRACE(TRACE_KEYMAP, "%s %s (0x%02x)",
 			  separator, ST_Modifiers[i].name, scancode);
 		separator = " |";
 
-		if (down)
+		flag = down;
+		if (mod & NO_XXX_BITS)
+			flag = ! down;
+
+		if (flag)
 		{
 			/* because modifiers may already be down
 			 * due to normal key events (or mapped
@@ -1107,7 +1144,7 @@ static bool InsertModifiers(uint8_t mods, bool down)
 			if (--Keyboard.KeyStates[scancode] > 0)
 				continue;
 		}
-		IKBD_PressSTKey(scancode, down);
+		IKBD_PressSTKey(scancode, flag);
 	}
 	return true;
 }
