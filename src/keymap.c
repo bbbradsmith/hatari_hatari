@@ -969,19 +969,27 @@ static bool IsKeyTranslatable(SDL_Keycode symkey)
 /**
  * Set modifiers keys indicated by bits in 'mods' up or down
  * based on 'down'.
+ *
+ * Return true if modifiers were present and trace output
+ * requires newline, false otherwise.
  */
-static void InsertModifiers(uint8_t mods, bool down)
+static bool InsertModifiers(uint8_t mods, bool down)
 {
+	const char *separator;
 	uint8_t i, scancode;
 	if (!mods)
-		return;
+		return false;
 
+	separator = "key mod(s):";
 	for (i = 0; i < ARRAY_SIZE(ST_Modifiers); i++)
 	{
 		if (!(mods & ST_Modifiers[i].mod))
 			continue;
 
 		scancode = ST_Modifiers[i].scancode;
+		LOG_TRACE(TRACE_KEYMAP, "%s %s (0x%02x)",
+			  separator, ST_Modifiers[i].name, scancode);
+		separator = " |";
 
 		if (down)
 		{
@@ -1000,6 +1008,7 @@ static void InsertModifiers(uint8_t mods, bool down)
 		}
 		IKBD_PressSTKey(scancode, down);
 	}
+	return true;
 }
 
 
@@ -1008,7 +1017,8 @@ static void InsertModifiers(uint8_t mods, bool down)
  * Insert key presses and releases for ALT_XXX digits
  * when relevant modifier bit is set.
  *
- * Return true if scancode should be ignored, false otherwise.
+ * Return true if scancode should be ignored and trace output
+ * requires newline, false otherwise.
  */
 static bool InsertAltXXXDigits(ST_Key *stkey)
 {
@@ -1033,6 +1043,9 @@ static bool InsertAltXXXDigits(ST_Key *stkey)
 		digit = *xxx - '0';
 		assert(digit >= 0 && digit <= 9);
 		scancode = keypad[digit];
+		LOG_TRACE(TRACE_KEYMAP, " + '%d' (0x%02x)",
+			  digit, scancode);
+
 		/* press and release each keycode
 		 * without checking whether they
 		 * are already pressed
@@ -1078,10 +1091,13 @@ void Keymap_KeyDown(const SDL_Keysym *sdlkey)
 	LOG_TRACE(TRACE_KEYMAP, "key map: sym=0x%x to ST-scan=0x%02x\n", symkey, STScanCode);
 
 	assert(Keyboard.KeyStates[scancode] == 0);
-	InsertModifiers(stkey->mods, true);
-	if (InsertAltXXXDigits(stkey))
-		return;
-
+	if (InsertModifiers(stkey->mods, true))
+	{
+		bool done = InsertAltXXXDigits(stkey);
+		LOG_TRACE(TRACE_KEYMAP, "\n");
+		if (done)
+			return;
+	}
 	if (!Keyboard.KeyStates[STScanCode])
 	{
 		/* Set down */
@@ -1133,7 +1149,16 @@ void Keymap_KeyUp(const SDL_Keysym *sdlkey)
 		IKBD_PressSTKey(STScanCode, false);
 		Keyboard.KeyStates[STScanCode]--;
 	}
-	InsertModifiers(stkey->mods, false);
+	if (InsertModifiers(stkey->mods, false))
+	{
+		LOG_TRACE(TRACE_KEYMAP, "\n");
+	}
+	/* Trace state of ST modifiers keys */
+	LOG_TRACE(TRACE_KEYMAP,"  LSHIFT:%d RSHIFT:%d CTRL:%d ALT:%d\n",
+		  Keyboard.KeyStates[ST_LSHIFT],
+		  Keyboard.KeyStates[ST_RSHIFT],
+		  Keyboard.KeyStates[ST_CONTROL],
+		  Keyboard.KeyStates[ST_ALTERNATE]);
 }
 
 /*-----------------------------------------------------------------------*/
