@@ -664,6 +664,7 @@ static ST_Key* Keymap_RemapKeyToSTKey(const SDL_Keysym* pKeySym)
 				continue;
 
 			pcmod = mapping->pc.mods;
+            LOG_TRACE(TRACE_KEYMAP, "key mapping entry: mods=0x%x, pcmod=0x%x\n", mods, pcmod);
 			/* (at least) one shift used? */
 			if (pcmod == KMOD_SHIFT)
 			{
@@ -761,12 +762,7 @@ static bool HostSpecToKeymap(const char *spec, KeyMapping* mapping)
 			mod = GetSdlModifier(token);
 			if (mod)
 			{
-				if (mods)
-				{
-					Log_Printf(LOG_ERROR, "extra '%s', PC/SDL modifier already set\n", token);
-					return false;
-				}
-				mods = mod;
+				mods |= mod;
 				continue;
 			}
 			/* is it non-modifier, symbolic key name? */
