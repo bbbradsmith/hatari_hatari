@@ -655,7 +655,7 @@ static ST_Key* Keymap_RemapKeyToSTKey(const SDL_Keysym* pKeySym)
 		for (i = 0; i < ARRAY_SIZE(LoadedKeymap); i++)
 		{
 			KeyMapping *mapping = &LoadedKeymap[i];
-			SDL_Keymod pcmod;
+			SDL_Keymod pcmod, matchmod;
 
 			if (mapping->pc.scancode == 0)
 				break; /* End of table */
@@ -663,18 +663,18 @@ static ST_Key* Keymap_RemapKeyToSTKey(const SDL_Keysym* pKeySym)
 			if (mapping->pc.scancode != scancode)
 				continue;
 
-			pcmod = mapping->pc.mods;
-            LOG_TRACE(TRACE_KEYMAP, "key mapping entry: mods=0x%x, pcmod=0x%x\n", mods, pcmod);
-			/* (at least) one shift used? */
-			if (pcmod == KMOD_SHIFT)
-			{
-				if (!(mods & pcmod))
-					continue;
-			}
-			/* (at least) specified mod used? */
-			else if ((mods & pcmod) != pcmod)
-				continue;
-
+			pcmod = matchmod = mapping->pc.mods;
+            if (((matchmod & KMOD_SHIFT) == KMOD_SHIFT) && (mods & KMOD_SHIFT))
+                matchmod = (matchmod & (~KMOD_SHIFT)) | (mods & KMOD_SHIFT);
+            if (((matchmod & KMOD_CTRL) == KMOD_CTRL) && (mods & KMOD_CTRL))
+                matchmod = (matchmod & (~KMOD_CTRL)) | (mods & KMOD_CTRL);
+            if (((matchmod & KMOD_ALT) == KMOD_ALT) && (mods & KMOD_ALT))
+                matchmod = (matchmod & (~KMOD_ALT)) | (mods & KMOD_ALT);
+            if (((matchmod & KMOD_GUI) == KMOD_GUI) && (mods & KMOD_GUI))
+                matchmod = (matchmod & (~KMOD_GUI)) | (mods & KMOD_GUI);
+            LOG_TRACE(TRACE_KEYMAP, "key mapping entry: mods=0x%x, pcmod=0x%x, matchmod=0x%x\n", mods, pcmod, matchmod);
+            if ((mods & matchmod) != matchmod)
+                continue;
 			KeysDown[scancode].mods = mapping->st.mods;
 			return UpdateMapping("keymap", scancode,
 					     mapping->st.scancode);
@@ -699,19 +699,19 @@ static SDL_Keymod GetSdlModifier(const char *name) {
 	} const keymodNames[] = {
 		{ KMOD_LSHIFT, "LSHIFT" },
 		{ KMOD_RSHIFT, "RSHIFT" },
-		{ KMOD_SHIFT,  "SHIFT" }, /* special case: either of above */
+		{ KMOD_SHIFT,  "SHIFT" }, /* either of above */
 
 		{ KMOD_LCTRL, "LCTRL" },
 		{ KMOD_RCTRL, "RCTRL" },
-		{ KMOD_CTRL,  "CTRL" },   /* both of above */
+		{ KMOD_CTRL,  "CTRL" },   /* either of above */
 
 		{ KMOD_LALT, "LALT" },
 		{ KMOD_RALT, "RALT" },
-		{ KMOD_ALT,  "ALT" },     /* both of above */
+		{ KMOD_ALT,  "ALT" },     /* either of above */
 
 		{ KMOD_LGUI, "LGUI" },
 		{ KMOD_RGUI, "RGUI" },
-		{ KMOD_GUI,  "GUI" },     /* both of above */
+		{ KMOD_GUI,  "GUI" },     /* either of above */
 
 		{ KMOD_CAPS, "CAPS" },
 		{ KMOD_MODE, "MODE" },
