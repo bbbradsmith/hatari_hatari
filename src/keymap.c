@@ -789,7 +789,7 @@ static bool HostSpecToKeymap(const char *spec, KeyMapping* mapping)
 			Log_Printf(LOG_WARN, "extra '%s', PC/SDL scancode already set\n", token);
 			return false;
 		}
-		scancode = strtol(token, &endptr, 10);
+		scancode = strtol(token, &endptr, 0);
 		if (!scancode)
 		{
 			Log_Printf(LOG_ERROR, "invalid PC/SDL scancode '%s'\n", token);
@@ -870,7 +870,7 @@ static bool GuestSpecToKeymap(const char *spec, KeyMapping* mapping)
 			Log_Printf(LOG_WARN, "extra '%s', ST scancode already set\n", token);
 			return false;
 		}
-		scancode = strtol(token, &endptr, 10);
+		scancode = strtol(token, &endptr, 0);
 		if (!scancode)
 		{
 			Log_Printf(LOG_ERROR, "invalid ST scancode '%s'\n", token);
